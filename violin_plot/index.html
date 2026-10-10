@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Interactive Observable Plot Violin Plot</title>
+
+  <style>
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f5f7fa;
+    }
+
+    .chart-container {
+      max-width: 1000px;
+      margin: auto;
+      padding: 25px;
+      background: white;
+      border-radius: 12px;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      margin-bottom: 25px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    input[type="range"] {
+      width: 200px;
+    }
+
+    #chart {
+      width: 100%;
+    }
+
+    .summary {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+<div class="chart-container">
+
+  <h2>Score Distribution by Program</h2>
+
+
+  <!-- INTERACTIVE CONTROLS -->
+
+  <div class="controls">
+
+
+    <!-- PROGRAM FILTER -->
+
+    <div class="control-group">
+
+      <label for="programFilter">
+        Filter by program:
+      </label>
+
+      <select id="programFilter">
+
+        <option value="All">
+          All programs
+        </option>
+
+      </select>
+
+    </div>
+
+
+    <!-- BANDWIDTH -->
+
+    <div class="control-group">
+
+      <label for="bandwidth">
+
+        KDE bandwidth:
+
+        <span id="bandwidthValue">
+          5
+        </span>
+
+      </label>
+
+      <input
+        id="bandwidth"
+        type="range"
+        min="2"
+        max="12"
+        value="5"
+        step="1"
+      >
+
+    </div>
+
+  </div>
+
+
+  <!-- CHART -->
+
+  <div id="chart"></div>
+
+
+  <!-- SUMMARY -->
+
+  <div
+    id="summary"
+    class="summary"
+  ></div>
+
+</div>
+
+
+<script type="module">
+
+import * as Plot
+  from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+
+
+// ------------------------------------------------
+// LOAD JSON
+// ------------------------------------------------
+
+const response =
+  await fetch("./data.json");
+
+
+if (!response.ok) {
+
+  throw new Error(
+    "Unable to load data.json"
+  );
+
+}
+
+
+const data =
+  await response.json();
+
+
+data.forEach(d => {
+
+  d.score =
+    Number(d.score);
+
+});
+
+
+// ------------------------------------------------
+// ELEMENTS
+// ------------------------------------------------
+
+const container =
+  document.querySelector("#chart");
+
+
+const programFilter =
+  document.querySelector("#programFilter");
+
+
+const bandwidthInput =
+  document.querySelector("#bandwidth");
+
+
+const bandwidthValue =
+  document.querySelector("#bandwidthValue");
+
+
+const summary =
+  document.querySelector("#summary");
+
+
+// ------------------------------------------------
+// PROGRAMS
+// ------------------------------------------------
+
+const programs = [
+
+  ...new Set(
+    data.map(d => d.program)
+  )
+
+];
+
+
+programs.forEach(program => {
+
+  const option =
+    document.createElement("option");
+
+  option.value =
+    program;
+
+  option.textContent =
+    program;
+
+  programFilter.appendChild(option);
+
+});
+
+
+// ------------------------------------------------
+// GAUSSIAN KERNEL
+// ------------------------------------------------
+
+function gaussianKernel(x) {
+
+  return (
+
+    Math.exp(
+      -0.5 * x * x
+    )
+
+    /
+
+    Math.sqrt(
+      2 * Math.PI
+    )
+
+  );
+
+}
+
+
+// ------------------------------------------------
+// KERNEL DENSITY ESTIMATION
+// ------------------------------------------------
+
+function kde(
+  values,
+  position,
+  bandwidth
+) {
+
+  if (!values.length) {
+    return 0;
+  }
+
+
+  return (
+
+    values.reduce(
+
+      (sum, value) =>
+
+        sum +
+
+        gaussianKernel(
+          (position - value)
+          /
+          bandwidth
+        ),
+
+      0
+
+    )
+
+    /
+
+    (
+      values.length *
+      bandwidth
+    )
+
+  );
+
+}
+
+
+// ------------------------------------------------
+// CREATE VIOLIN DATA
+// ------------------------------------------------
+
+function createViolinData(
+  dataset,
+  activePrograms,
+  bandwidth
+) {
+
+  const result = [];
+
+
+  const minimum = 40;
+
+  const maximum = 100;
+
+  const steps = 120;
+
+
+  activePrograms.forEach(
+
+    (program, index) => {
+
+
+      const values =
+        dataset
+
+          .filter(
+            d =>
+              d.program === program
+          )
+
+          .map(
+            d => d.score
+          );
+
+
+      const densityData = [];
+
+
+      // Calculate density
+
+      for (
+        let i = 0;
+        i <= steps;
+        i++
+      ) {
+
+
+        const score =
+
+          minimum +
+
+          (
+            (maximum - minimum)
+            *
+            i / steps
+          );
+
+
+        densityData.push({
+
+          score,
+
+          density:
+            kde(
+              values,
+              score,
+              bandwidth
+            )
+
+        });
+
+      }
+
+
+      // Find maximum density
+
+      const maxDensity =
+        Math.max(
+          ...densityData.map(
+            d => d.density
+          )
+        );
+
+
+      // Normalize violin width
+
+      densityData.forEach(d => {
+
+
+        const width =
+
+          maxDensity === 0
+
+            ? 0
+
+            : (
+                d.density /
+                maxDensity
+              ) * 0.35;
+
+
+        result.push({
+
+          program,
+
+          score:
+            d.score,
+
+          x1:
+            index - width,
+
+          x2:
+            index + width
+
+        });
+
+      });
+
+    }
+
+  );
+
+
+  return result;
+
+}
+
+
+// ------------------------------------------------
+// MEDIAN
+// ------------------------------------------------
+
+function median(values) {
+
+  const sorted =
+    [...values].sort(
+      (a, b) => a - b
+    );
+
+
+  const middle =
+    Math.floor(
+      sorted.length / 2
+    );
+
+
+  if (
+    sorted.length % 2 === 0
+  ) {
+
+    return (
+
+      sorted[middle - 1] +
+      sorted[middle]
+
+    ) / 2;
+
+  }
+
+
+  return sorted[middle];
+
+}
+
+
+// ------------------------------------------------
+// DRAW CHART
+// ------------------------------------------------
+
+function drawChart() {
+
+
+  container.innerHTML = "";
+
+
+  const selectedProgram =
+    programFilter.value;
+
+
+  const bandwidth =
+    Number(
+      bandwidthInput.value
+    );
+
+
+  bandwidthValue.textContent =
+    bandwidth;
+
+
+  // ----------------------------------------------
+  // FILTER DATA
+  // ----------------------------------------------
+
+  const filteredData =
+
+    selectedProgram === "All"
+
+      ? data
+
+      : data.filter(
+
+          d =>
+            d.program ===
+            selectedProgram
+
+        );
+
+
+  const activePrograms = [
+
+    ...new Set(
+      filteredData.map(
+        d => d.program
+      )
+    )
+
+  ];
+
+
+  // ----------------------------------------------
+  // VIOLIN DATA
+  // ----------------------------------------------
+
+  const violinData =
+    createViolinData(
+      filteredData,
+      activePrograms,
+      bandwidth
+    );
+
+
+  // ----------------------------------------------
+  // OBSERVATIONS
+  // ----------------------------------------------
+
+  const observations =
+    filteredData.map(d => ({
+
+      ...d,
+
+      x:
+        activePrograms.indexOf(
+          d.program
+        )
+
+    }));
+
+
+  // ----------------------------------------------
+  // MEDIANS
+  // ----------------------------------------------
+
+  const medians =
+    activePrograms.map(
+
+      (program, index) => {
+
+
+        const scores =
+          filteredData
+
+            .filter(
+              d =>
+                d.program === program
+            )
+
+            .map(
+              d => d.score
+            );
+
+
+        return {
+
+          program,
+
+          x: index,
+
+          median:
+            median(scores)
+
+        };
+
+      }
+
+    );
+
+
+  // ----------------------------------------------
+  // CREATE CHART
+  // ----------------------------------------------
+
+  const chart =
+    Plot.plot({
+
+
+      width:
+        Math.max(
+          container.clientWidth,
+          320
+        ),
+
+
+      height: 500,
+
+
+      marginLeft: 70,
+
+      marginRight: 30,
+
+      marginTop: 30,
+
+      marginBottom: 70,
+
+
+      // X AXIS
+
+      x: {
+
+        domain: [
+
+          -0.6,
+
+          activePrograms.length - 0.4
+
+        ],
+
+        ticks:
+          activePrograms.map(
+            (_, i) => i
+          ),
+
+        tickFormat:
+          i =>
+            activePrograms[i] ?? "",
+
+        label:
+          "Program →"
+
+      },
+
+
+      // Y AXIS
+
+      y: {
+
+        domain: [40, 100],
+
+        label:
+          "↑ Score",
+
+        grid: true
+
+      },
+
+
+      marks: [
+
+
+        // ----------------------------------------
+        // VIOLIN
+        // ----------------------------------------
+
+        Plot.areaX(
+
+          violinData,
+
+          {
+
+            x1: "x1",
+
+            x2: "x2",
+
+            y: "score",
+
+            z: "program",
+
+            fill: "#4f86c6",
+
+            fillOpacity: 0.45,
+
+            stroke: "#2563eb",
+
+            strokeWidth: 2,
+
+            curve: "basis"
+
+          }
+
+        ),
+
+
+        // ----------------------------------------
+        // INDIVIDUAL OBSERVATIONS
+        // ----------------------------------------
+
+        Plot.dot(
+
+          observations,
+
+          {
+
+            x: "x",
+
+            y: "score",
+
+            r: 3,
+
+            fill: "#2563eb",
+
+            fillOpacity: 0.45
+
+          }
+
+        ),
+
+
+        // ----------------------------------------
+        // MEDIAN
+        // ----------------------------------------
+
+        Plot.dot(
+
+          medians,
+
+          {
+
+            x: "x",
+
+            y: "median",
+
+            r: 6,
+
+            fill: "#111827",
+
+            stroke: "white",
+
+            strokeWidth: 2
+
+          }
+
+        ),
+
+
+        // ----------------------------------------
+        // INTERACTIVE POINT
+        // ----------------------------------------
+
+        Plot.dot(
+
+          observations,
+
+          Plot.pointer({
+
+            x: "x",
+
+            y: "score",
+
+            r: 8,
+
+            fill: "#e11d48",
+
+            stroke: "white",
+
+            strokeWidth: 2
+
+          })
+
+        ),
+
+
+        // ----------------------------------------
+        // TOOLTIP
+        // ----------------------------------------
+
+        Plot.tip(
+
+          observations,
+
+          Plot.pointer({
+
+            x: "x",
+
+            y: "score",
+
+            title: d =>
+              `${d.program}
+Score: ${d.score}`
+
+          })
+
+        )
+
+      ]
+
+    });
+
+
+  container.append(chart);
+
+
+  // ----------------------------------------------
+  // SUMMARY
+  // ----------------------------------------------
+
+  const scores =
+    filteredData.map(
+      d => d.score
+    );
+
+
+  const mean =
+
+    scores.reduce(
+
+      (sum, score) =>
+        sum + score,
+
+      0
+
+    )
+
+    /
+
+    scores.length;
+
+
+  summary.innerHTML = `
+
+    <strong>Programs:</strong>
+    ${activePrograms.length}
+
+    &nbsp; | &nbsp;
+
+    <strong>Observations:</strong>
+    ${scores.length}
+
+    &nbsp; | &nbsp;
+
+    <strong>Overall mean:</strong>
+    ${mean.toFixed(1)}
+
+  `;
+
+}
+
+
+// ------------------------------------------------
+// PROGRAM FILTER
+// ------------------------------------------------
+
+programFilter.addEventListener(
+  "change",
+  drawChart
+);
+
+
+// ------------------------------------------------
+// BANDWIDTH INTERACTION
+// ------------------------------------------------
+
+bandwidthInput.addEventListener(
+  "input",
+  drawChart
+);
+
+
+// ------------------------------------------------
+// RESPONSIVE CHART
+// ------------------------------------------------
+
+let resizeTimer;
+
+
+const resizeObserver =
+  new ResizeObserver(() => {
+
+
+    clearTimeout(
+      resizeTimer
+    );
+
+
+    resizeTimer =
+      setTimeout(
+        drawChart,
+        100
+      );
+
+
+  });
+
+
+resizeObserver.observe(
+  container
+);
+
+
+// ------------------------------------------------
+// INITIAL CHART
+// ------------------------------------------------
+
+drawChart();
+
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Interactive Observable Plot Heatmap</title>
+
+  <style>
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f5f7fa;
+    }
+
+    .chart-container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 25px;
+      margin-bottom: 25px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #chart {
+      width: 100%;
+    }
+
+    @media (max-width: 600px) {
+
+      body {
+        margin: 10px;
+      }
+
+      .chart-container {
+        padding: 15px;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <div class="chart-container">
+
+    <h2>Activity Heatmap</h2>
+
+    <!-- Interactive controls -->
+
+    <div class="controls">
+
+      <div class="control-group">
+
+        <label for="dayFilter">
+          Filter by day:
+        </label>
+
+        <select id="dayFilter">
+
+          <option value="All">
+            All days
+          </option>
+
+        </select>
+
+      </div>
+
+    </div>
+
+
+    <!-- Heatmap -->
+
+    <div id="chart"></div>
+
+  </div>
+
+
+  <script type="module">
+
+    import * as Plot
+      from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+
+
+    // --------------------------------------------
+    // LOAD JSON
+    // --------------------------------------------
+
+    const response = await fetch("./data.json");
+
+    if (!response.ok) {
+      throw new Error("Unable to load data.json");
+    }
+
+    const data = await response.json();
+
+
+    // Convert value to number
+
+    data.forEach(d => {
+      d.value = Number(d.value);
+    });
+
+
+    // --------------------------------------------
+    // HTML ELEMENTS
+    // --------------------------------------------
+
+    const container =
+      document.querySelector("#chart");
+
+    const dayFilter =
+      document.querySelector("#dayFilter");
+
+
+    // --------------------------------------------
+    // DAY ORDER
+    // --------------------------------------------
+
+    const dayOrder = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday"
+    ];
+
+
+    // --------------------------------------------
+    // CREATE FILTER OPTIONS
+    // --------------------------------------------
+
+    const availableDays =
+      dayOrder.filter(day =>
+        data.some(d => d.day === day)
+      );
+
+
+    availableDays.forEach(day => {
+
+      const option =
+        document.createElement("option");
+
+      option.value = day;
+
+      option.textContent = day;
+
+      dayFilter.appendChild(option);
+
+    });
+
+
+    // --------------------------------------------
+    // DRAW HEATMAP
+    // --------------------------------------------
+
+    function drawChart() {
+
+      container.innerHTML = "";
+
+
+      // Get selected day
+
+      const selectedDay =
+        dayFilter.value;
+
+
+      // ------------------------------------------
+      // FILTER DATA
+      // ------------------------------------------
+
+      const filteredData =
+        selectedDay === "All"
+          ? data
+          : data.filter(
+              d => d.day === selectedDay
+            );
+
+
+      // ------------------------------------------
+      // Y DOMAIN
+      // ------------------------------------------
+
+      const visibleDays =
+        selectedDay === "All"
+          ? availableDays
+          : [selectedDay];
+
+
+      // ------------------------------------------
+      // CREATE CHART
+      // ------------------------------------------
+
+      const chart = Plot.plot({
+
+        width:
+          Math.max(container.clientWidth, 320),
+
+        height:
+          selectedDay === "All"
+            ? 450
+            : 180,
+
+        marginLeft: 100,
+        marginBottom: 60,
+        marginRight: 30,
+
+
+        // ----------------------------------------
+        // X AXIS
+        // ----------------------------------------
+
+        x: {
+
+          label: "Hour →",
+
+          domain: [
+            ...new Set(
+              data.map(d => d.hour)
+            )
+          ]
+
+        },
+
+
+        // ----------------------------------------
+        // Y AXIS
+        // ----------------------------------------
+
+        y: {
+
+          label: "Day",
+
+          domain: visibleDays
+
+        },
+
+
+        // ----------------------------------------
+        // COLOR SCALE
+        // ----------------------------------------
+
+        color: {
+
+          type: "linear",
+
+          scheme: "YlOrRd",
+
+          domain: [0, 100],
+
+          legend: true,
+
+          label: "Activity"
+
+        },
+
+
+        // ----------------------------------------
+        // MARKS
+        // ----------------------------------------
+
+        marks: [
+
+          // HEATMAP CELLS
+
+          Plot.cell(filteredData, {
+
+            x: "hour",
+
+            y: "day",
+
+            fill: "value",
+
+            inset: 1,
+
+            rx: 4,
+
+            title: d =>
+              `${d.day}
+Time: ${d.hour}
+Activity: ${d.value}`
+
+          }),
+
+
+          // VALUES INSIDE CELLS
+
+          Plot.text(filteredData, {
+
+            x: "hour",
+
+            y: "day",
+
+            text: d => d.value,
+
+            fill: d =>
+              d.value >= 60
+                ? "white"
+                : "black",
+
+            fontWeight: "bold",
+
+            pointerEvents: "none"
+
+          })
+
+        ]
+
+      });
+
+
+      container.append(chart);
+
+    }
+
+
+    // --------------------------------------------
+    // INITIAL CHART
+    // --------------------------------------------
+
+    drawChart();
+
+
+    // --------------------------------------------
+    // FILTER INTERACTION
+    // --------------------------------------------
+
+    dayFilter.addEventListener(
+      "change",
+      drawChart
+    );
+
+
+    // --------------------------------------------
+    // RESPONSIVE CHART
+    // --------------------------------------------
+
+    let resizeTimer;
+
+    const resizeObserver =
+      new ResizeObserver(() => {
+
+        clearTimeout(resizeTimer);
+
+        resizeTimer =
+          setTimeout(drawChart, 100);
+
+      });
+
+
+    resizeObserver.observe(container);
+
+  </script>
+
+</body>
+
+</html>

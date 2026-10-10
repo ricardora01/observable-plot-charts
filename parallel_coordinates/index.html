@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Interactive Parallel Coordinates Chart</title>
+
+  <style>
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f5f7fa;
+    }
+
+    .chart-container {
+      max-width: 1100px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 25px;
+      margin-bottom: 25px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #chart {
+      width: 100%;
+    }
+
+    .info {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      font-size: 14px;
+      min-height: 22px;
+    }
+
+    @media (max-width: 600px) {
+
+      body {
+        margin: 10px;
+      }
+
+      .chart-container {
+        padding: 15px;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <div class="chart-container">
+
+    <h2>Project Comparison</h2>
+
+    <p>
+      Parallel coordinates visualization of project metrics.
+    </p>
+
+
+    <!-- INTERACTIVE CONTROLS -->
+
+    <div class="controls">
+
+      <!-- CATEGORY FILTER -->
+
+      <div class="control-group">
+
+        <label for="categoryFilter">
+          Filter by category:
+        </label>
+
+        <select id="categoryFilter">
+
+          <option value="All">
+            All categories
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- PROJECT FILTER -->
+
+      <div class="control-group">
+
+        <label for="projectFilter">
+          Highlight project:
+        </label>
+
+        <select id="projectFilter">
+
+          <option value="All">
+            No selection
+          </option>
+
+        </select>
+
+      </div>
+
+    </div>
+
+
+    <!-- CHART -->
+
+    <div id="chart"></div>
+
+
+    <!-- INFORMATION -->
+
+    <div
+      id="info"
+      class="info"
+    >
+      Select a project to highlight its profile.
+    </div>
+
+  </div>
+
+
+  <script type="module">
+
+    import * as Plot
+      from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+
+
+    // ------------------------------------------------
+    // LOAD JSON
+    // ------------------------------------------------
+
+    const response =
+      await fetch("./data.json");
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        "Unable to load data.json"
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    // ------------------------------------------------
+    // VARIABLES
+    // ------------------------------------------------
+
+    const dimensions = [
+
+      "cost",
+
+      "performance",
+
+      "quality",
+
+      "innovation",
+
+      "satisfaction"
+
+    ];
+
+
+    // Convert values to numbers
+
+    data.forEach(d => {
+
+      dimensions.forEach(dimension => {
+
+        d[dimension] =
+          Number(d[dimension]);
+
+      });
+
+    });
+
+
+    // ------------------------------------------------
+    // HTML ELEMENTS
+    // ------------------------------------------------
+
+    const container =
+      document.querySelector("#chart");
+
+
+    const categoryFilter =
+      document.querySelector("#categoryFilter");
+
+
+    const projectFilter =
+      document.querySelector("#projectFilter");
+
+
+    const info =
+      document.querySelector("#info");
+
+
+    // ------------------------------------------------
+    // CATEGORY OPTIONS
+    // ------------------------------------------------
+
+    const categories = [
+
+      ...new Set(
+        data.map(d => d.category)
+      )
+
+    ];
+
+
+    categories.forEach(category => {
+
+      const option =
+        document.createElement("option");
+
+      option.value = category;
+
+      option.textContent = category;
+
+      categoryFilter.appendChild(option);
+
+    });
+
+
+    // ------------------------------------------------
+    // UPDATE PROJECT FILTER
+    // ------------------------------------------------
+
+    function updateProjectFilter() {
+
+      const selectedCategory =
+        categoryFilter.value;
+
+
+      projectFilter.innerHTML = `
+        <option value="All">
+          No selection
+        </option>
+      `;
+
+
+      const projects =
+        selectedCategory === "All"
+
+          ? data
+
+          : data.filter(
+              d =>
+                d.category === selectedCategory
+            );
+
+
+      projects.forEach(project => {
+
+        const option =
+          document.createElement("option");
+
+        option.value =
+          project.name;
+
+        option.textContent =
+          project.name;
+
+        projectFilter.appendChild(option);
+
+      });
+
+    }
+
+
+    // ------------------------------------------------
+    // TRANSFORM DATA
+    // ------------------------------------------------
+
+    function transformData(dataset) {
+
+      return dataset.flatMap(project =>
+
+        dimensions.map(dimension => ({
+
+          name:
+            project.name,
+
+          category:
+            project.category,
+
+          dimension:
+            dimension,
+
+          value:
+            project[dimension]
+
+        }))
+
+      );
+
+    }
+
+
+    // ------------------------------------------------
+    // DRAW CHART
+    // ------------------------------------------------
+
+    function drawChart() {
+
+      container.innerHTML = "";
+
+
+      const selectedCategory =
+        categoryFilter.value;
+
+
+      const selectedProject =
+        projectFilter.value;
+
+
+      // ----------------------------------------------
+      // FILTER DATA
+      // ----------------------------------------------
+
+      const filteredProjects =
+        selectedCategory === "All"
+
+          ? data
+
+          : data.filter(
+              d =>
+                d.category === selectedCategory
+            );
+
+
+      // ----------------------------------------------
+      // TRANSFORM WIDE → LONG
+      // ----------------------------------------------
+
+      const longData =
+        transformData(filteredProjects);
+
+
+      // ----------------------------------------------
+      // NON-SELECTED DATA
+      // ----------------------------------------------
+
+      const backgroundData =
+        selectedProject === "All"
+
+          ? longData
+
+          : longData.filter(
+              d =>
+                d.name !== selectedProject
+            );
+
+
+      // ----------------------------------------------
+      // SELECTED DATA
+      // ----------------------------------------------
+
+      const selectedData =
+        selectedProject === "All"
+
+          ? []
+
+          : longData.filter(
+              d =>
+                d.name === selectedProject
+            );
+
+
+      // ----------------------------------------------
+      // CREATE CHART
+      // ----------------------------------------------
+
+      const chart = Plot.plot({
+
+        width:
+          Math.max(
+            container.clientWidth,
+            400
+          ),
+
+        height: 500,
+
+        marginLeft: 60,
+        marginRight: 40,
+        marginTop: 30,
+        marginBottom: 70,
+
+
+        // X AXIS
+
+        x: {
+
+          domain: dimensions,
+
+          label: "Metric →",
+
+          padding: 0.3
+
+        },
+
+
+        // Y AXIS
+
+        y: {
+
+          domain: [0, 100],
+
+          label: "↑ Score",
+
+          grid: true
+
+        },
+
+
+        // CATEGORY COLORS
+
+        color: {
+
+          legend: true
+
+        },
+
+
+        marks: [
+
+          // ----------------------------------------
+          // VERTICAL AXES
+          // ----------------------------------------
+
+          Plot.ruleX(
+
+            dimensions,
+
+            {
+
+              x: d => d,
+
+              stroke: "#d1d5db",
+
+              strokeWidth: 1
+
+            }
+
+          ),
+
+
+          // ----------------------------------------
+          // BACKGROUND PROJECT LINES
+          // ----------------------------------------
+
+          Plot.line(
+
+            backgroundData,
+
+            {
+
+              x: "dimension",
+
+              y: "value",
+
+              z: "name",
+
+              stroke: "category",
+
+              strokeWidth:
+                selectedProject === "All"
+                  ? 2
+                  : 1.5,
+
+              strokeOpacity:
+                selectedProject === "All"
+                  ? 0.65
+                  : 0.2
+
+            }
+
+          ),
+
+
+          // ----------------------------------------
+          // POINTS
+          // ----------------------------------------
+
+          Plot.dot(
+
+            backgroundData,
+
+            {
+
+              x: "dimension",
+
+              y: "value",
+
+              fill: "category",
+
+              r: 3,
+
+              fillOpacity:
+                selectedProject === "All"
+                  ? 0.8
+                  : 0.2
+
+            }
+
+          ),
+
+
+          // ----------------------------------------
+          // SELECTED PROJECT
+          // ----------------------------------------
+
+          Plot.line(
+
+            selectedData,
+
+            {
+
+              x: "dimension",
+
+              y: "value",
+
+              z: "name",
+
+              stroke: "#111827",
+
+              strokeWidth: 5
+
+            }
+
+          ),
+
+
+          // ----------------------------------------
+          // SELECTED PROJECT POINTS
+          // ----------------------------------------
+
+          Plot.dot(
+
+            selectedData,
+
+            {
+
+              x: "dimension",
+
+              y: "value",
+
+              fill: "#111827",
+
+              stroke: "white",
+
+              strokeWidth: 2,
+
+              r: 6,
+
+              tip: true,
+
+              title: d =>
+                `${d.name}
+${d.dimension}: ${d.value}`
+
+            }
+
+          )
+
+        ]
+
+      });
+
+
+      container.append(chart);
+
+
+      // ----------------------------------------------
+      // INFORMATION
+      // ----------------------------------------------
+
+      if (selectedProject === "All") {
+
+        info.textContent =
+          `Showing ${filteredProjects.length} projects.`;
+
+      }
+
+      else {
+
+        const project =
+          data.find(
+            d =>
+              d.name === selectedProject
+          );
+
+
+        info.innerHTML = `
+
+          <strong>${project.name}</strong>
+
+          &nbsp; | &nbsp;
+
+          Category:
+          ${project.category}
+
+          &nbsp; | &nbsp;
+
+          Cost:
+          ${project.cost}
+
+          &nbsp; | &nbsp;
+
+          Performance:
+          ${project.performance}
+
+          &nbsp; | &nbsp;
+
+          Quality:
+          ${project.quality}
+
+          &nbsp; | &nbsp;
+
+          Innovation:
+          ${project.innovation}
+
+          &nbsp; | &nbsp;
+
+          Satisfaction:
+          ${project.satisfaction}
+
+        `;
+
+      }
+
+    }
+
+
+    // ------------------------------------------------
+    // CATEGORY FILTER
+    // ------------------------------------------------
+
+    categoryFilter.addEventListener(
+      "change",
+      () => {
+
+        updateProjectFilter();
+
+        drawChart();
+
+      }
+    );
+
+
+    // ------------------------------------------------
+    // PROJECT HIGHLIGHT
+    // ------------------------------------------------
+
+    projectFilter.addEventListener(
+      "change",
+      drawChart
+    );
+
+
+    // ------------------------------------------------
+    // RESPONSIVE CHART
+    // ------------------------------------------------
+
+    let resizeTimer;
+
+
+    const resizeObserver =
+      new ResizeObserver(() => {
+
+        clearTimeout(resizeTimer);
+
+        resizeTimer =
+          setTimeout(
+            drawChart,
+            100
+          );
+
+      });
+
+
+    resizeObserver.observe(container);
+
+
+    // ------------------------------------------------
+    // INITIALIZE
+    // ------------------------------------------------
+
+    updateProjectFilter();
+
+    drawChart();
+
+  </script>
+
+</body>
+
+</html>

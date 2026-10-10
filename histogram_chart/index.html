@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Interactive Observable Plot Histogram</title>
+
+  <style>
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f5f7fa;
+    }
+
+    .chart-container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      margin-bottom: 25px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    input[type="range"] {
+      width: 200px;
+      cursor: pointer;
+    }
+
+    .summary {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    #chart {
+      width: 100%;
+    }
+
+    @media (max-width: 600px) {
+
+      body {
+        margin: 10px;
+      }
+
+      .chart-container {
+        padding: 15px;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+  <div class="chart-container">
+
+    <h2>Score Distribution</h2>
+
+    <div class="controls">
+
+      <!-- Program filter -->
+
+      <div class="control-group">
+
+        <label for="programFilter">
+          Filter by program:
+        </label>
+
+        <select id="programFilter">
+
+          <option value="All">
+            All programs
+          </option>
+
+        </select>
+
+      </div>
+
+
+      <!-- Number of bins -->
+
+      <div class="control-group">
+
+        <label for="binFilter">
+          Number of bins:
+          <span id="binValue">10</span>
+        </label>
+
+        <input
+          id="binFilter"
+          type="range"
+          min="4"
+          max="20"
+          value="10"
+          step="1"
+        >
+
+      </div>
+
+    </div>
+
+
+    <!-- Histogram -->
+
+    <div id="chart"></div>
+
+
+    <!-- Summary -->
+
+    <div
+      id="summary"
+      class="summary"
+    ></div>
+
+  </div>
+
+
+  <script type="module">
+
+    import * as Plot
+      from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+
+
+    // --------------------------------------------
+    // LOAD JSON
+    // --------------------------------------------
+
+    const response =
+      await fetch("./data.json");
+
+    if (!response.ok) {
+
+      throw new Error(
+        "Unable to load data.json"
+      );
+
+    }
+
+    const data =
+      await response.json();
+
+
+    // Convert scores to numbers
+
+    data.forEach(d => {
+
+      d.score =
+        Number(d.score);
+
+    });
+
+
+    // --------------------------------------------
+    // HTML ELEMENTS
+    // --------------------------------------------
+
+    const container =
+      document.querySelector("#chart");
+
+    const programFilter =
+      document.querySelector("#programFilter");
+
+    const binFilter =
+      document.querySelector("#binFilter");
+
+    const binValue =
+      document.querySelector("#binValue");
+
+    const summary =
+      document.querySelector("#summary");
+
+
+    // --------------------------------------------
+    // CREATE PROGRAM FILTER
+    // --------------------------------------------
+
+    const programs = [
+      ...new Set(
+        data.map(d => d.program)
+      )
+    ];
+
+
+    programs.forEach(program => {
+
+      const option =
+        document.createElement("option");
+
+      option.value = program;
+
+      option.textContent = program;
+
+      programFilter.appendChild(option);
+
+    });
+
+
+    // --------------------------------------------
+    // DRAW HISTOGRAM
+    // --------------------------------------------
+
+    function drawChart() {
+
+      container.innerHTML = "";
+
+
+      // Get controls
+
+      const selectedProgram =
+        programFilter.value;
+
+      const bins =
+        Number(binFilter.value);
+
+
+      binValue.textContent = bins;
+
+
+      // ------------------------------------------
+      // FILTER DATA
+      // ------------------------------------------
+
+      const filteredData =
+        selectedProgram === "All"
+
+          ? data
+
+          : data.filter(
+              d =>
+                d.program === selectedProgram
+            );
+
+
+      // ------------------------------------------
+      // CREATE HISTOGRAM
+      // ------------------------------------------
+
+      const chart = Plot.plot({
+
+        width:
+          Math.max(
+            container.clientWidth,
+            320
+          ),
+
+        height: 450,
+
+        marginLeft: 60,
+        marginBottom: 60,
+        marginRight: 30,
+
+
+        // X AXIS
+
+        x: {
+
+          label: "Score →",
+
+          domain: [50, 100],
+
+          grid: true
+
+        },
+
+
+        // Y AXIS
+
+        y: {
+
+          label: "↑ Frequency",
+
+          grid: true
+
+        },
+
+
+        marks: [
+
+          // --------------------------------------
+          // HISTOGRAM
+          // --------------------------------------
+
+          Plot.rectY(
+
+            filteredData,
+
+            Plot.binX(
+
+              {
+                y: "count"
+              },
+
+              {
+                x: "score",
+
+                thresholds: bins,
+
+                fill: "#4f86c6",
+
+                fillOpacity: 0.8,
+
+                stroke: "white",
+
+                inset: 1,
+
+                tip: true
+              }
+
+            )
+
+          ),
+
+
+          // --------------------------------------
+          // BASELINE
+          // --------------------------------------
+
+          Plot.ruleY([0])
+
+        ]
+
+      });
+
+
+      container.append(chart);
+
+
+      // ------------------------------------------
+      // SUMMARY STATISTICS
+      // ------------------------------------------
+
+      const scores =
+        filteredData.map(d => d.score);
+
+
+      if (scores.length === 0) {
+
+        summary.textContent =
+          "No observations available.";
+
+        return;
+
+      }
+
+
+      const mean =
+        scores.reduce(
+          (sum, value) => sum + value,
+          0
+        ) / scores.length;
+
+
+      const min =
+        Math.min(...scores);
+
+
+      const max =
+        Math.max(...scores);
+
+
+      summary.innerHTML = `
+        <strong>Observations:</strong>
+        ${scores.length}
+
+        &nbsp; | &nbsp;
+
+        <strong>Mean:</strong>
+        ${mean.toFixed(1)}
+
+        &nbsp; | &nbsp;
+
+        <strong>Minimum:</strong>
+        ${min}
+
+        &nbsp; | &nbsp;
+
+        <strong>Maximum:</strong>
+        ${max}
+      `;
+
+    }
+
+
+    // --------------------------------------------
+    // INITIAL CHART
+    // --------------------------------------------
+
+    drawChart();
+
+
+    // --------------------------------------------
+    // PROGRAM FILTER
+    // --------------------------------------------
+
+    programFilter.addEventListener(
+      "change",
+      drawChart
+    );
+
+
+    // --------------------------------------------
+    // BIN INTERACTION
+    // --------------------------------------------
+
+    binFilter.addEventListener(
+      "input",
+      drawChart
+    );
+
+
+    // --------------------------------------------
+    // RESPONSIVE CHART
+    // --------------------------------------------
+
+    let resizeTimer;
+
+
+    const resizeObserver =
+      new ResizeObserver(() => {
+
+        clearTimeout(resizeTimer);
+
+        resizeTimer =
+          setTimeout(
+            drawChart,
+            100
+          );
+
+      });
+
+
+    resizeObserver.observe(container);
+
+  </script>
+
+</body>
+
+</html>

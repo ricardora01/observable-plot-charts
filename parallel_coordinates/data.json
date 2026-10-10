@@ -1,0 +1,74 @@
+[
+  {
+    "name": "Project A",
+    "category": "Engineering",
+    "cost": 70,
+    "performance": 85,
+    "quality": 90,
+    "innovation": 78,
+    "satisfaction": 88
+  },
+  {
+    "name": "Project B",
+    "category": "Engineering",
+    "cost": 55,
+    "performance": 78,
+    "quality": 82,
+    "innovation": 92,
+    "satisfaction": 80
+  },
+  {
+    "name": "Project C",
+    "category": "Business",
+    "cost": 40,
+    "performance": 72,
+    "quality": 75,
+    "innovation": 68,
+    "satisfaction": 76
+  },
+  {
+    "name": "Project D",
+    "category": "Business",
+    "cost": 65,
+    "performance": 88,
+    "quality": 84,
+    "innovation": 74,
+    "satisfaction": 90
+  },
+  {
+    "name": "Project E",
+    "category": "Science",
+    "cost": 80,
+    "performance": 92,
+    "quality": 95,
+    "innovation": 96,
+    "satisfaction": 91
+  },
+  {
+    "name": "Project F",
+    "category": "Science",
+    "cost": 60,
+    "performance": 84,
+    "quality": 88,
+    "innovation": 89,
+    "satisfaction": 85
+  },
+  {
+    "name": "Project G",
+    "category": "Technology",
+    "cost": 75,
+    "performance": 95,
+    "quality": 91,
+    "innovation": 98,
+    "satisfaction": 94
+  },
+  {
+    "name": "Project H",
+    "category": "Technology",
+    "cost": 50,
+    "performance": 82,
+    "quality": 86,
+    "innovation": 94,
+    "satisfaction": 87
+  }
+]

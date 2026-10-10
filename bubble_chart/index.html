@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Interactive Observable Plot Bubble Chart</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f5f7fa;
+    }
+
+    .chart-container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .controls {
+      margin-bottom: 25px;
+    }
+
+    .controls label {
+      font-weight: bold;
+      margin-right: 10px;
+    }
+
+    select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #chart {
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="chart-container">
+
+    <h2>Project Performance</h2>
+
+    <!-- Interactive filter -->
+    <div class="controls">
+      <label for="categoryFilter">
+        Filter by category:
+      </label>
+
+      <select id="categoryFilter">
+        <option value="All">All categories</option>
+      </select>
+    </div>
+
+    <!-- Bubble chart -->
+    <div id="chart"></div>
+
+  </div>
+
+
+  <script type="module">
+
+    import * as Plot
+      from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+
+
+    // ------------------------------------------------
+    // Load JSON
+    // ------------------------------------------------
+
+    const response = await fetch("./data.json");
+    const data = await response.json();
+
+
+    // Convert values to numbers
+    data.forEach(d => {
+      d.cost = Number(d.cost);
+      d.performance = Number(d.performance);
+      d.size = Number(d.size);
+    });
+
+
+    // ------------------------------------------------
+    // HTML elements
+    // ------------------------------------------------
+
+    const container = document.querySelector("#chart");
+    const filter = document.querySelector("#categoryFilter");
+
+
+    // ------------------------------------------------
+    // Generate filter options
+    // ------------------------------------------------
+
+    const categories = [
+      ...new Set(data.map(d => d.category))
+    ];
+
+
+    categories.forEach(category => {
+
+      const option = document.createElement("option");
+
+      option.value = category;
+      option.textContent = category;
+
+      filter.appendChild(option);
+
+    });
+
+
+    // ------------------------------------------------
+    // Draw bubble chart
+    // ------------------------------------------------
+
+    function drawChart() {
+
+      container.innerHTML = "";
+
+      const selectedCategory = filter.value;
+
+
+      // Filter dataset
+      const filteredData =
+        selectedCategory === "All"
+          ? data
+          : data.filter(
+              d => d.category === selectedCategory
+            );
+
+
+      const chart = Plot.plot({
+
+        width: container.clientWidth,
+        height: 500,
+
+        marginLeft: 70,
+        marginBottom: 60,
+        marginRight: 30,
+
+        // X axis
+        x: {
+          label: "Cost →",
+          grid: true,
+          nice: true
+        },
+
+        // Y axis
+        y: {
+          label: "↑ Performance",
+          grid: true,
+          nice: true
+        },
+
+        // Bubble size scale
+        r: {
+          range: [5, 30]
+        },
+
+        // Color categories
+        color: {
+          legend: true
+        },
+
+        marks: [
+
+          // ------------------------------------------
+          // Bubbles
+          // ------------------------------------------
+
+          Plot.dot(filteredData, {
+            x: "cost",
+            y: "performance",
+
+            // Bubble size
+            r: "size",
+
+            // Category determines color
+            fill: "category",
+
+            fillOpacity: 0.65,
+
+            stroke: "white",
+            strokeWidth: 1.5
+          }),
+
+
+          // ------------------------------------------
+          // Interactive selected bubble
+          // ------------------------------------------
+
+          Plot.dot(
+            filteredData,
+            Plot.pointer({
+              x: "cost",
+              y: "performance",
+
+              r: d =>
+                Math.sqrt(d.size) / 2 + 5,
+
+              fill: "category",
+
+              stroke: "black",
+              strokeWidth: 3
+            })
+          ),
+
+
+          // ------------------------------------------
+          // Interactive tooltip
+          // ------------------------------------------
+
+          Plot.tip(
+            filteredData,
+            Plot.pointer({
+              x: "cost",
+              y: "performance",
+
+              title: d =>
+                `${d.name}
+Category: ${d.category}
+Cost: ${d.cost}
+Performance: ${d.performance}
+Size: ${d.size}`
+            })
+          )
+        ]
+      });
+
+
+      container.append(chart);
+    }
+
+
+    // ------------------------------------------------
+    // Initial chart
+    // ------------------------------------------------
+
+    drawChart();
+
+
+    // ------------------------------------------------
+    // Filter interaction
+    // ------------------------------------------------
+
+    filter.addEventListener(
+      "change",
+      drawChart
+    );
+
+
+    // ------------------------------------------------
+    // Responsive chart
+    // ------------------------------------------------
+
+    const resizeObserver =
+      new ResizeObserver(drawChart);
+
+    resizeObserver.observe(container);
+
+  </script>
+
+</body>
+</html>

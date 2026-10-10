@@ -1,0 +1,12 @@
+[
+  { "name": "Project A", "category": "Engineering", "cost": 40, "performance": 75, "size": 120 },
+  { "name": "Project B", "category": "Engineering", "cost": 55, "performance": 82, "size": 180 },
+  { "name": "Project C", "category": "Business", "cost": 30, "performance": 65, "size": 90 },
+  { "name": "Project D", "category": "Business", "cost": 65, "performance": 72, "size": 210 },
+  { "name": "Project E", "category": "Science", "cost": 45, "performance": 88, "size": 150 },
+  { "name": "Project F", "category": "Science", "cost": 70, "performance": 91, "size": 250 },
+  { "name": "Project G", "category": "Technology", "cost": 50, "performance": 80, "size": 200 },
+  { "name": "Project H", "category": "Technology", "cost": 85, "performance": 95, "size": 300 },
+  { "name": "Project I", "category": "Engineering", "cost": 75, "performance": 87, "size": 230 },
+  { "name": "Project J", "category": "Technology", "cost": 35, "performance": 78, "size": 140 }
+]

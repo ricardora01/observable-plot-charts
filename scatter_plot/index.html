@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Interactive Observable Plot Scatter Plot</title>
+
+  <style>
+
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f5f7fa;
+    }
+
+    .chart-container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 25px;
+      margin-bottom: 25px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    select {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    #chart {
+      width: 100%;
+    }
+
+    .info {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f1f5f9;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+
+      body {
+        margin: 10px;
+      }
+
+      .chart-container {
+        padding: 15px;
+      }
+
+    }
+
+  </style>
+
+</head>
+
+
+<body>
+
+  <div class="chart-container">
+
+    <h2>Study Hours vs. Exam Score</h2>
+
+    <!-- Interactive controls -->
+
+    <div class="controls">
+
+      <div class="control-group">
+
+        <label for="programFilter">
+          Filter by program:
+        </label>
+
+        <select id="programFilter">
+
+          <option value="All">
+            All programs
+          </option>
+
+        </select>
+
+      </div>
+
+    </div>
+
+
+    <!-- Scatter plot -->
+
+    <div id="chart"></div>
+
+
+    <!-- Information -->
+
+    <div
+      id="info"
+      class="info"
+    >
+      Hover over a point to see student information.
+    </div>
+
+  </div>
+
+
+  <script type="module">
+
+    import * as Plot
+      from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+
+
+    // ------------------------------------------------
+    // LOAD JSON
+    // ------------------------------------------------
+
+    const response =
+      await fetch("./data.json");
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        "Unable to load data.json"
+      );
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    // ------------------------------------------------
+    // CONVERT NUMERICAL VALUES
+    // ------------------------------------------------
+
+    data.forEach(d => {
+
+      d.hours =
+        Number(d.hours);
+
+      d.score =
+        Number(d.score);
+
+    });
+
+
+    // ------------------------------------------------
+    // HTML ELEMENTS
+    // ------------------------------------------------
+
+    const container =
+      document.querySelector("#chart");
+
+
+    const programFilter =
+      document.querySelector("#programFilter");
+
+
+    const info =
+      document.querySelector("#info");
+
+
+    // ------------------------------------------------
+    // CREATE FILTER OPTIONS
+    // ------------------------------------------------
+
+    const programs = [
+
+      ...new Set(
+        data.map(d => d.program)
+      )
+
+    ];
+
+
+    programs.forEach(program => {
+
+      const option =
+        document.createElement("option");
+
+      option.value = program;
+
+      option.textContent = program;
+
+      programFilter.appendChild(option);
+
+    });
+
+
+    // ------------------------------------------------
+    // DRAW SCATTER PLOT
+    // ------------------------------------------------
+
+    function drawChart() {
+
+      container.innerHTML = "";
+
+
+      // Selected program
+
+      const selectedProgram =
+        programFilter.value;
+
+
+      // ----------------------------------------------
+      // FILTER DATA
+      // ----------------------------------------------
+
+      const filteredData =
+        selectedProgram === "All"
+
+          ? data
+
+          : data.filter(
+              d =>
+                d.program === selectedProgram
+            );
+
+
+      // ----------------------------------------------
+      // CREATE CHART
+      // ----------------------------------------------
+
+      const chart = Plot.plot({
+
+        width:
+          Math.max(
+            container.clientWidth,
+            320
+          ),
+
+        height: 500,
+
+        marginLeft: 70,
+        marginBottom: 60,
+        marginRight: 30,
+        marginTop: 30,
+
+
+        // --------------------------------------------
+        // X AXIS
+        // --------------------------------------------
+
+        x: {
+
+          label: "Study hours →",
+
+          grid: true,
+
+          nice: true
+
+        },
+
+
+        // --------------------------------------------
+        // Y AXIS
+        // --------------------------------------------
+
+        y: {
+
+          label: "↑ Exam score",
+
+          grid: true,
+
+          nice: true
+
+        },
+
+
+        // --------------------------------------------
+        // COLOR SCALE
+        // --------------------------------------------
+
+        color: {
+
+          legend:
+            selectedProgram === "All",
+
+          label: "Program"
+
+        },
+
+
+        // --------------------------------------------
+        // MARKS
+        // --------------------------------------------
+
+        marks: [
+
+          // ------------------------------------------
+          // SCATTER POINTS
+          // ------------------------------------------
+
+          Plot.dot(filteredData, {
+
+            x: "hours",
+
+            y: "score",
+
+            fill: "program",
+
+            r: 7,
+
+            fillOpacity: 0.7,
+
+            stroke: "white",
+
+            strokeWidth: 1.5
+
+          }),
+
+
+          // ------------------------------------------
+          // INTERACTIVE POINT
+          // ------------------------------------------
+
+          Plot.dot(
+
+            filteredData,
+
+            Plot.pointer({
+
+              x: "hours",
+
+              y: "score",
+
+              fill: "program",
+
+              r: 11,
+
+              stroke: "#111827",
+
+              strokeWidth: 2
+
+            })
+
+          ),
+
+
+          // ------------------------------------------
+          // INTERACTIVE TOOLTIP
+          // ------------------------------------------
+
+          Plot.tip(
+
+            filteredData,
+
+            Plot.pointer({
+
+              x: "hours",
+
+              y: "score",
+
+              title: d =>
+                `${d.name}
+Program: ${d.program}
+Study hours: ${d.hours}
+Exam score: ${d.score}`
+
+            })
+
+          ),
+
+
+          // ------------------------------------------
+          // OPTIONAL TREND LINE
+          // ------------------------------------------
+
+          Plot.linearRegressionY(
+
+            filteredData,
+
+            {
+
+              x: "hours",
+
+              y: "score",
+
+              stroke: "#64748b",
+
+              strokeWidth: 2,
+
+              strokeDasharray: "6,4"
+
+            }
+
+          )
+
+        ]
+
+      });
+
+
+      container.append(chart);
+
+
+      // ----------------------------------------------
+      // UPDATE INFORMATION
+      // ----------------------------------------------
+
+      info.textContent =
+        `Showing ${filteredData.length} observations.`;
+
+    }
+
+
+    // ------------------------------------------------
+    // INITIAL CHART
+    // ------------------------------------------------
+
+    drawChart();
+
+
+    // ------------------------------------------------
+    // FILTER INTERACTION
+    // ------------------------------------------------
+
+    programFilter.addEventListener(
+      "change",
+      drawChart
+    );
+
+
+    // ------------------------------------------------
+    // RESPONSIVE CHART
+    // ------------------------------------------------
+
+    let resizeTimer;
+
+
+    const resizeObserver =
+      new ResizeObserver(() => {
+
+        clearTimeout(resizeTimer);
+
+        resizeTimer =
+          setTimeout(
+            drawChart,
+            100
+          );
+
+      });
+
+
+    resizeObserver.observe(container);
+
+  </script>
+
+</body>
+
+</html>

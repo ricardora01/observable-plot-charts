@@ -1,0 +1,29 @@
+[
+  { "group": "Engineering", "score": 78 },
+  { "group": "Engineering", "score": 82 },
+  { "group": "Engineering", "score": 85 },
+  { "group": "Engineering", "score": 88 },
+  { "group": "Engineering", "score": 91 },
+  { "group": "Engineering", "score": 95 },
+
+  { "group": "Business", "score": 65 },
+  { "group": "Business", "score": 70 },
+  { "group": "Business", "score": 72 },
+  { "group": "Business", "score": 76 },
+  { "group": "Business", "score": 80 },
+  { "group": "Business", "score": 85 },
+
+  { "group": "Science", "score": 72 },
+  { "group": "Science", "score": 75 },
+  { "group": "Science", "score": 79 },
+  { "group": "Science", "score": 83 },
+  { "group": "Science", "score": 87 },
+  { "group": "Science", "score": 92 },
+
+  { "group": "Technology", "score": 80 },
+  { "group": "Technology", "score": 84 },
+  { "group": "Technology", "score": 88 },
+  { "group": "Technology", "score": 91 },
+  { "group": "Technology", "score": 94 },
+  { "group": "Technology", "score": 98 }
+]

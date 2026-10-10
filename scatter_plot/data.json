@@ -1,0 +1,21 @@
+[
+  { "name": "Student A", "program": "Engineering", "hours": 4, "score": 65 },
+  { "name": "Student B", "program": "Engineering", "hours": 6, "score": 72 },
+  { "name": "Student C", "program": "Engineering", "hours": 8, "score": 81 },
+  { "name": "Student D", "program": "Engineering", "hours": 10, "score": 89 },
+
+  { "name": "Student E", "program": "Business", "hours": 3, "score": 60 },
+  { "name": "Student F", "program": "Business", "hours": 5, "score": 68 },
+  { "name": "Student G", "program": "Business", "hours": 7, "score": 76 },
+  { "name": "Student H", "program": "Business", "hours": 9, "score": 84 },
+
+  { "name": "Student I", "program": "Science", "hours": 4, "score": 70 },
+  { "name": "Student J", "program": "Science", "hours": 6, "score": 79 },
+  { "name": "Student K", "program": "Science", "hours": 8, "score": 87 },
+  { "name": "Student L", "program": "Science", "hours": 11, "score": 95 },
+
+  { "name": "Student M", "program": "Technology", "hours": 5, "score": 75 },
+  { "name": "Student N", "program": "Technology", "hours": 7, "score": 83 },
+  { "name": "Student O", "program": "Technology", "hours": 9, "score": 91 },
+  { "name": "Student P", "program": "Technology", "hours": 12, "score": 97 }
+]

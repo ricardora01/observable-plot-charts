@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Observable Plot Bar Chart</title>
+
+  <script type="module">
+    import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/+esm";
+
+    // Load data from JSON file
+    const response = await fetch("./data.json");
+    const data = await response.json();
+
+    // Make sure values are numbers
+    data.forEach(d => {
+      d.value = Number(d.value);
+    });
+
+    const container = document.querySelector("#chart");
+
+    function drawChart() {
+
+      // Remove previous chart when resizing
+      container.innerHTML = "";
+
+      const chart = Plot.plot({
+        width: container.clientWidth,
+        height: 450,
+
+        marginLeft: 60,
+        marginBottom: 70,
+
+        x: {
+          label: "Category →",
+          padding: 0.3
+        },
+
+        y: {
+          label: "↑ Value",
+          grid: true,
+          nice: true
+        },
+
+        marks: [
+
+          // Bars
+          Plot.barY(data, {
+            x: "category",
+            y: "value",
+            fill: "#4f86c6",
+            rx: 4
+          }),
+
+          // Interactive highlight
+          Plot.barY(
+            data,
+            Plot.pointerX({
+              x: "category",
+              y: "value",
+              fill: "#2563eb",
+              rx: 4
+            })
+          ),
+
+          // Interactive tooltip
+          Plot.tip(
+            data,
+            Plot.pointerX({
+              x: "category",
+              y: "value",
+
+              title: d =>
+                `${d.category}\nValue: ${d.value}`
+            })
+          ),
+
+          // Optional value labels
+          Plot.text(data, {
+            x: "category",
+            y: "value",
+            text: d => d.value,
+            dy: -10,
+            fontWeight: "bold"
+          })
+        ]
+      });
+
+      container.append(chart);
+    }
+
+    // Initial render
+    drawChart();
+
+    // Redraw chart when container changes size
+    const resizeObserver = new ResizeObserver(drawChart);
+    resizeObserver.observe(container);
+
+  </script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f5f7fa;
+    }
+
+    .chart-container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+    }
+
+    h2 {
+      margin-top: 0;
+    }
+
+    #chart {
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="chart-container">
+
+    <h2>Values by Category</h2>
+
+    <div id="chart"></div>
+
+  </div>
+
+</body>
+</html>
